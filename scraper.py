@@ -1,46 +1,75 @@
+from datetime import date
+from pathlib import Path
+
 import pandas as pd
 
+GRADES = "FDCBA"
 YALE_CELI_LIST = "https://som.yale.edu/story/2022/over-1000-companies-have-curtailed-operations-russia-some-remain"
 
-tables = pd.read_html(YALE_CELI_LIST)
 
-grade_F, grade_D, grade_C, grade_B, grade_A = tables
+def lowercase_search(list_, target):
+    return target.lower() in (elem.lower() for elem in list_)
 
 
 class Companies:
-    grades = "FDCBA"
+    def __init__(self):
+        self.companies_df = self.fetch_data()
 
-    def __init__(self, grades_dataframes: list[pd.DataFrame]):
-        self.grades_dataframes = grades_dataframes
+    @staticmethod
+    def fetch_data() -> pd.DataFrame:
+        file_name = f"./yale_companies_{date.today()}.json"
+        if Path(file_name).exists():
+            return pd.read_json(file_name)
+        else:
+            companies_by_grade = pd.read_html(YALE_CELI_LIST)
 
-    def __iter__(self):
-        self.iterator = zip(Companies.grades, self.grades_dataframes)
-        return self
+            result = pd.DataFrame()
+            for grade, df in zip(GRADES, companies_by_grade):
+                df["Grade"] = grade
+                result = pd.concat([result, df])
+            result.reset_index(inplace=True)
+            result.to_json(file_name)
+            return result
 
-    def __next__(self):
-        return self.iterator.__next__()
+    def find(self, company_name: str) -> pd.Series:
+        for search_function in (
+                self.by_exact_company_name,
+                self.by_company_name_fragment_lowercase,
+        ):
+            result = search_function(company_name)
+            if not result.empty:
+                return result[0]
 
-    @property
+    def by_exact_company_name(self, company_name):
+        return self.companies_df[company_name == self.companies_df["Name"]]
 
-    @property
-    def company_names(self):
-        return
+    def by_company_name_fragment_lowercase(self, company_name):
+        return self.companies_df[company_name.lower() in self.companies_df["Name"].lower()]
 
-    def no_lowercase_duplicates(self, debugging=False):
-        names = []
-        for grade, df in self:
-            names.extend(df["Name"])
-        names = [name.lower() for name in names]
+    @staticmethod
+    def _valid_grade(grade: str):
+        return len(grade) == 1 and grade.lower() in GRADES.lower()
 
-        if debugging:
-            duplicates = set()
-            for name in names:
-                if names.count(name) > 1:
-                    duplicates.add(name)
-            print("duplicates found: ", duplicates)
+    def by_grade(self, letter):
+        if not self._valid_grade(letter):
+            raise ValueError(f"Invalid grade: {letter}. Valid grades: {GRADES}")
 
-        unique_names = set(names)
-        return len(names) == len(unique_names)
+        return self.companies_df[self.companies_df["Grade"] == letter.upper()]
+
+    def _valid_country(self, country_name):
+        return country_name.title() in self.companies_df["Country"]
+
+    def by_country(self, country_name):
+        if not self._valid_country:
+            raise ValueError(f"Invalid country_name: {country_name}")
+
+        return self.companies_df[self.companies_df["Country"] == country_name.title()]
 
 
-no_lowercase_duplicates(tables, debugging=True)
+class CompanyInformation:
+    def __init__(self, company_data: pd.Series):
+        self.name = company_data["Name"]
+        self.action = company_data["Action"]
+        self.industry = company_data["Industry"]
+        self.country = company_data["Country"]
+        self.grade = company_data["Grade"]
