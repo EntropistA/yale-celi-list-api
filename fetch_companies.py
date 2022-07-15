@@ -1,3 +1,4 @@
+import types
 from datetime import date
 from pathlib import Path
 
@@ -5,10 +6,6 @@ import pandas as pd
 
 GRADES = "FDCBA"
 YALE_CELI_LIST = "https://som.yale.edu/story/2022/over-1000-companies-have-curtailed-operations-russia-some-remain"
-
-
-def lowercase_search(list_, target):
-    return target.lower() in (elem.lower() for elem in list_)
 
 
 class Companies:
@@ -31,20 +28,16 @@ class Companies:
             result.to_json(file_name)
             return result
 
-    def find(self, company_name: str) -> pd.Series:
-        for search_function in (
-                self.by_exact_company_name,
-                self.by_company_name_fragment_lowercase,
-        ):
-            result = search_function(company_name)
+    def search(self, company_name: str) -> pd.DataFrame:
+        search_functions = CompaniesNameSearch(self.companies_df).search_functions
+        for function in search_functions:
+            result = function(company_name)
             if not result.empty:
-                return result[0]
+                return result
+        raise ValueError(f"{company_name} not found")
 
-    def by_exact_company_name(self, company_name):
-        return self.companies_df[company_name == self.companies_df["Name"]]
-
-    def by_company_name_fragment_lowercase(self, company_name):
-        return self.companies_df[company_name.lower() in self.companies_df["Name"].lower()]
+    def find(self, company_name: str) -> pd.Series:
+        return self.search(company_name).iloc[0]
 
     @staticmethod
     def _valid_grade(grade: str):
@@ -66,10 +59,21 @@ class Companies:
         return self.companies_df[self.companies_df["Country"] == country_name.title()]
 
 
-class CompanyInformation:
-    def __init__(self, company_data: pd.Series):
-        self.name = company_data["Name"]
-        self.action = company_data["Action"]
-        self.industry = company_data["Industry"]
-        self.country = company_data["Country"]
-        self.grade = company_data["Grade"]
+class CompaniesNameSearch:
+    def __init__(self, companies_df: pd.DataFrame):
+        self.companies_df = companies_df
+
+    @property
+    def search_functions(self) -> [types.FunctionType]:
+        return [
+            self.by_exact_company_name,
+            self.by_company_name_fragment_lowercase,
+        ]
+
+    def by_exact_company_name(self, company_name) -> pd.DataFrame:
+        return self.companies_df[company_name == self.companies_df["Name"]]
+
+    def by_company_name_fragment_lowercase(self, company_name) -> pd.DataFrame:
+        return self.companies_df[self.companies_df["Name"].str.lower().str.contains(company_name.lower())]
+
+

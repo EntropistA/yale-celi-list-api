@@ -3,7 +3,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from scraper import Companies
+from fetch_companies import Companies
 
 
 class TestCompanies(unittest.TestCase):
@@ -39,6 +39,7 @@ class TestCompanies(unittest.TestCase):
     def test_find(self):
         self.fetch()
 
+        self.assertIsNotNone(self.companies.search("alphabet"))
         self.assertIsNotNone(self.companies.find("alphabet"))
 
 
