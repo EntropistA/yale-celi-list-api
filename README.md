@@ -5,6 +5,7 @@
 This API serves to find information about companies' responses to Russian invasion on Ukraine.
 
 The information is fully based on a free to use list published by the Yale University:
+
 https://som.yale.edu/story/2022/over-1000-companies-have-curtailed-operations-russia-some-remain
 
 The list offers an easy-to-use A-F grade system.
