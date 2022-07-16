@@ -19,3 +19,8 @@ The list offers an easy-to-use A-F grade system.
 JSON with "Name", "Action", "Industry", "Country" as an attribute.
 
 `{server}/find-company-by-name/{company_name}`
+
+How it works?
+1. Checks for an exact match.
+2. Finds items containing user provided company_name as their fragment.
+Then sorts by length to ensure the highest possibility of finding proper item.

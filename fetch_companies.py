@@ -74,6 +74,6 @@ class CompaniesNameSearch:
         return self.companies_df[company_name == self.companies_df["Name"]]
 
     def by_company_name_fragment_lowercase(self, company_name) -> pd.DataFrame:
-        return self.companies_df[self.companies_df["Name"].str.lower().str.contains(company_name.lower())]
-
-
+        # The shorter the name the higher is the chance of finding proper item
+        result = self.companies_df[self.companies_df["Name"].str.lower().str.contains(company_name.lower())]
+        return result.sort_values(by="Name", key=lambda series: series.apply(len))
